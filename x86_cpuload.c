@@ -3,6 +3,7 @@
  *
  * Copyright (C) 2015 Intel Corp.
  *
+ * gcc x86_cpuload.c -o x86_cpuload -lm -lpthread
  *  ./x86_cpuload -s 2 -c 1 -b 40 -t 100 or
  *  ./x86_cpuload --start 2 --count 1 --busy 40 --timeout 100
  * This program is free software; you can redistribute it and/or
