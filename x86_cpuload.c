@@ -46,6 +46,7 @@ int time_out = DEFAULT_TIMEOUT_SEC;	/* total time for testing */
 int busy_pct = DEFAULT_CPU_BUSY;	/* busy percentage, const mode*/
 int load_mode = DEFAULT_LOAD_MODE;	/* y=ax y=sin(x)...*/
 int period_sec = DEFAULT_PERIOD_SEC;	/* period time for sin(x) */
+int no_aff = 0;				/* do not set task cpu affinity */
 unsigned long thread_count = 1;		/* worker thread */
 unsigned long start_cpu;		/* cpu idto start wuth */
 unsigned long online_cpus;		/* total online cpus*/
@@ -202,12 +203,14 @@ static void start_worker_threads(void)
 	i = start_cpu;
 	end = i + thread_count;
 	for (; i < end; ++i) {
-		CPU_ZERO(&cpus);
-		CPU_SET(i, &cpus);
-		ret = pthread_attr_setaffinity_np(&thread_attr,
+		if (!no_aff) {
+			CPU_ZERO(&cpus);
+			CPU_SET(i, &cpus);
+			ret = pthread_attr_setaffinity_np(&thread_attr,
 						  sizeof(cpu_set_t), &cpus);
-		if (ret)
-			err_exit("pthread_attr_setaffinity_np failed.", 1);
+			if (ret)
+				err_exit("pthread_attr_setaffinity_np failed.", 1);
+		}
 
 		pthread_create(&cpu_info[i].thread, &thread_attr, cpu_workload,
 			       (void *)(unsigned long)i);
@@ -261,6 +264,7 @@ void help(void)
 	" -b, --busy N       N%% busy when mode is set to constant load\n"
 	" -p, --sample N     N msec of one sample period\n"
 	" -d, --period N     N sec for one trigonometric period\n"
+	" -n, --noaff        do not set task cpu affinity\n"
 	" -m, --mode N       workload type, default to constant load\n"
 	"                    m=1: constant load, y=ax (default)\n"
 	"                    m=2: wave load, y=0.5sin(ax)+0.5\n"
@@ -279,6 +283,7 @@ static const struct option long_options[] = {
 	{"sample", required_argument, NULL, 'p'},
 	{"period", required_argument, NULL, 'd'},
 	{"help", no_argument, NULL, 'h'},
+	{"noaff", no_argument, NULL, 'n'},
 	{0, 0, 0, 0}
 };
 
@@ -289,7 +294,7 @@ int cmdline(int argc, char **argv)
 
 	progname = argv[0];
 
-	while ((opt = getopt_long(argc, argv, "c:b:t:s:p:d:m:h",
+	while ((opt = getopt_long(argc, argv, "c:b:t:s:p:d:m:nh",
 		long_options, &option_index)) != -1) {
 		switch (opt) {
 		case 's':
@@ -313,6 +318,9 @@ int cmdline(int argc, char **argv)
 			break;
 		case 'm':
 			load_mode = atoi(optarg);
+			break;
+		case 'n':
+			no_aff = 1;
 			break;
 		case 'h':
 		default:
